@@ -81,7 +81,7 @@ class SignToTextViewModel(application: Application) : AndroidViewModel(applicati
 
     private fun startPredictionJob() {
         predictionJob = viewModelScope.launch {
-            // THE CHANGE IS HERE: Updated from 2000ms to 3000ms
+            // Reverted back to 2000ms (2 seconds) as requested
             delay(2000)
             processPredictionBuffer()
             resetPredictionCycle()
@@ -127,5 +127,11 @@ class SignToTextViewModel(application: Application) : AndroidViewModel(applicati
         super.onCleared()
         textToSpeechService.shutdown()
         handLandmarkerHelper.clear()
+    }
+
+    fun onResetClicked() {
+        _predictedText.value = ""
+        _currentLetter.value = ""
+        resetPredictionCycle() // Also reset the prediction buffer
     }
 }

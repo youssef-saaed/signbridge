@@ -17,77 +17,72 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yousefsaid04.aslcommunicator.viewmodel.AppViewModel
 
 @Composable
-fun SpeechToTextScreen(viewModel: SpeechToTextViewModel = viewModel()) {
-    val recognizedText by viewModel.recognizedText.collectAsState()
-    val isListening by viewModel.isListening.collectAsState()
+fun SpeechToTextScreen(appViewModel: AppViewModel) {
+    val recognizedText by appViewModel.recognizedText.collectAsState()
+    val isListening by appViewModel.isListening.collectAsState()
     var hasAudioPermission by remember { mutableStateOf(false) }
 
-    // Create a permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
             hasAudioPermission = isGranted
             if (isGranted) {
-                viewModel.startListening()
+                appViewModel.startListening()
             }
         }
     )
 
     LaunchedEffect(key1 = true) {
-        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        if (!hasAudioPermission) {
+            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
     }
 
-    // Pulsing animation for the microphone icon when listening
-    val infiniteTransition = rememberInfiniteTransition(label = "mic_animation")
+    val infiniteTransition = rememberInfiniteTransition(label = "mic_pulse")
     val scale by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = if (isListening) 1.2f else 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(600),
-            repeatMode = RepeatMode.Reverse
-        ), label = ""
+        animationSpec = infiniteRepeatable(animation = tween(600), repeatMode = RepeatMode.Reverse),
+        label = "mic_scale"
     )
     val color by infiniteTransition.animateColor(
-        initialValue = MaterialTheme.colorScheme.onSurface,
+        initialValue = MaterialTheme.colorScheme.onSurfaceVariant,
         targetValue = if (isListening) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-        animationSpec = infiniteRepeatable(
-            animation = tween(600, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ), label = ""
+        animationSpec = infiniteRepeatable(animation = tween(600, easing = LinearEasing), repeatMode = RepeatMode.Reverse),
+        label = "mic_color"
     )
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
+        modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         if (hasAudioPermission) {
             Icon(
                 imageVector = Icons.Default.Mic,
-                contentDescription = if (isListening) "Listening..." else "Not listening",
-                modifier = Modifier.size(64.dp).scale(scale),
+                contentDescription = if (isListening) "Listening..." else "Microphone Idle",
+                modifier = Modifier.size(80.dp).scale(scale),
                 tint = color
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = if (isListening) "Listening..." else "Microphone is idle",
+                // THE FIX: Simplified text to reflect the always-on state
+                text = if (isListening) "Listening..." else "Microphone Idle",
                 style = MaterialTheme.typography.titleLarge,
                 color = color
             )
             Spacer(modifier = Modifier.height(40.dp))
             Text(
-                text = recognizedText.ifEmpty { "Say something to begin." },
+                text = recognizedText.ifEmpty { "Waiting for speech..." },
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center
             )
         } else {
             Text(
-                text = "Audio permission is required to use this feature. Please grant the permission.",
+                text = "Audio permission is required for this feature.",
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center
             )
